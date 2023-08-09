@@ -54,7 +54,7 @@ class ORedis:
         ORedis.connection.flushdb()
         return ORedis.connection
 
-def RedisOmSchema(cls):
+def ORedisSchema(cls):
     cls.subclass_name: str = cls.__name__
     cls.prefix = f"{cls.subclass_name.lower()}:"
     cls.index_name = cls.subclass_name.capitalize()
