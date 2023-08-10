@@ -114,6 +114,16 @@ def ORedisSchema(cls):
 
     cls.find = find
 
+    def insert(bulk):
+        pipe: Connection = cls.connection.pipeline()
+        for doc in bulk:
+            doc['_id'] = uuid_hex()
+            pipe.hset(f"cat:{doc['_id']}", mapping=doc)
+
+        pipe.execute()
+
+    cls.insert = insert
+
     def save(self):
         cls.connection.hset(f"{cls.prefix}{self._id}", mapping=self.__dict__)
         return self
@@ -125,4 +135,19 @@ def ORedisSchema(cls):
 class Schema(ORedis):
     def __init__(self):
         self._id = uuid_hex()
+
+    def save(self):
+        pass
+
+    @classmethod
+    def create(cls, doc_dict):
+        pass
+
+    @classmethod
+    def find(cls, query):
+        pass
+
+    @classmethod
+    def insert(cls, bulk):
+        pass
 
