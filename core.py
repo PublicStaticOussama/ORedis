@@ -55,6 +55,10 @@ class ORedis:
         return ORedis.connection
 
 def ORedisSchema(cls):
+    if not hasattr(cls, 'connection'):
+        raise Exception("Error: a connection to redis-stack has to be established before using an ORedis schema")
+    if cls.connection is None:
+        raise Exception("Error: the connection to redis-stack has to be established before defining an ORedis schema")
     cls.subclass_name: str = cls.__name__
     cls.prefix = f"{cls.subclass_name.lower()}:"
     cls.index_name = cls.subclass_name.capitalize()
