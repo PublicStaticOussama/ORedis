@@ -44,14 +44,14 @@ class ORedis:
     def __init__(self, host="localhost", port=6379, db=0):
         ORedis.connection = redis.Redis(host=host, port=port, db=db)
         self.connection = ORedis.connection
-        self.connection.flushdb()
+        # self.connection.flushdb()
 
     @staticmethod
     def getConnection(host, port, db):
         if ORedis.connection is not None:
             return ORedis.connection
         ORedis.connection = redis.Redis(host=host, port=port, db=db)
-        ORedis.connection.flushdb()
+        # ORedis.connection.flushdb()
         return ORedis.connection
 
 def ORedisSchema(cls):
