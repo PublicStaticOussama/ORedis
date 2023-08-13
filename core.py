@@ -105,7 +105,8 @@ def ORedisSchema(cls):
                 q_arr.append(f"@{field}:{value}")
             else:
                 q_arr.append(f"@{field}:{value}")
-        res = cls.connection.ft(cls.index_name).search(Query(" ".join(q_arr) if bool(q_arr) else "*"))
+        q_str = " ".join(q_arr) if bool(q_arr) else "*"
+        res = cls.connection.ft(cls.index_name).search(Query(q_str))
         arr = []
         for doc in res.docs:
             arr.append(cls.create(doc.__dict__))
@@ -113,6 +114,25 @@ def ORedisSchema(cls):
         return arr 
 
     cls.find = find
+
+    def findOne(query) -> cls:
+        q_arr = []
+        for field, value in query.items():
+            if issubclass(type(value), int):
+                q_arr.append(f"@{field}:[{str(value)} {str(value)}]")
+            elif issubclass(type(value), str):
+                q_arr.append(f"@{field}:{value}")
+            else:
+                q_arr.append(f"@{field}:{value}")
+        q_str = " ".join(q_arr) if bool(q_arr) else "*"
+        res = cls.connection.ft(cls.index_name).search(Query(q_str).paging(0, 1))
+        one = None
+        for doc in res.docs:
+            one = cls.create(doc.__dict__)
+        
+        return one
+    
+    cls.findOne: cls = findOne
 
     def insert(bulk):
         pipe: Connection = cls.connection.pipeline()
@@ -145,6 +165,10 @@ class Schema(ORedis):
 
     @classmethod
     def find(cls, query):
+        pass
+
+    @classmethod
+    def findOne(cls, query):
         pass
 
     @classmethod
