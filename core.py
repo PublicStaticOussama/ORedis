@@ -41,17 +41,19 @@ def waitForIndex(env, idx, timeout=None):
 
 class ORedis:
     connection: Connection = None
-    def __init__(self, host="localhost", port=6379, db=0):
+    def __init__(self, host="localhost", port=6379, db=0, flush=False):
         ORedis.connection = redis.Redis(host=host, port=port, db=db)
         self.connection = ORedis.connection
-        # self.connection.flushdb()
+        if flush:
+            self.connection.flushdb()
 
     @staticmethod
-    def getConnection(host, port, db):
+    def getConnection(host, port, db, flush=False):
         if ORedis.connection is not None:
             return ORedis.connection
         ORedis.connection = redis.Redis(host=host, port=port, db=db)
-        # ORedis.connection.flushdb()
+        if flush:
+            ORedis.connection.flushdb()
         return ORedis.connection
 
 def ORedisSchema(cls):
@@ -139,10 +141,11 @@ def ORedisSchema(cls):
     cls.findOne: cls = findOne
 
     def insert(bulk):
+        # print(bulk)
         pipe: Connection = cls.connection.pipeline()
         for doc in bulk:
             doc['_id'] = uuid_hex()
-            pipe.hset(f"cat:{doc['_id']}", mapping=doc)
+            pipe.hset(f"{cls.prefix}{doc['_id']}", mapping=doc)
 
         pipe.execute()
 
