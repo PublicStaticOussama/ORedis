@@ -17,6 +17,19 @@ import uuid
 def uuid_hex():
     return uuid.uuid4().hex
 
+def resolve_bool(st):
+    if type(st) != str and type(st) != bool:
+        print("this one ???")
+        raise Exception("Error: invalid boolean equivalent")
+    if type(st) == bool:
+        return st
+    if st == "True" or st == "true":
+        return True
+    elif st == "False" or st == "false":
+        return False
+    else:
+        raise Exception("Error: invalid boolean equivalent")
+
 def waitForIndex(env, idx, timeout=None):
     delay = 0.1
     while True:
@@ -71,7 +84,9 @@ def ORedisSchema(cls):
     schema = ()
     field_names = vars(instance).items()
     for fieldname, value in field_names:
-        if issubclass(type(value), int):
+        if issubclass(type(value), bool):
+            schema = schema + (TextField(fieldname),)
+        elif issubclass(type(value), int):
             schema = schema + (NumericField(fieldname),)
         elif issubclass(type(value), str):
             schema = schema + (TextField(fieldname),)
@@ -83,6 +98,25 @@ def ORedisSchema(cls):
         waitForIndex(cls.connection, cls.index_name)
     except Exception as e:
         print(e)
+
+    original_init = cls.__init__
+
+    def new(self, *args, **kwargs):
+        original_init(self, *args, **kwargs)
+        setattr(self, "_id", uuid_hex())
+        for fieldname, default_val in field_names:
+            val = getattr(self, fieldname)
+            cast_val = val
+            if issubclass(type(default_val), bool): # this if HAS to come before the int case, because
+                cast_val = resolve_bool(val)
+            elif issubclass(type(default_val), int):
+                cast_val = int(val) 
+            else:
+                cast_val = str(val)
+            setattr(self, fieldname, cast_val)
+
+
+    cls.__init__ = new
 
     def toString(self):
         return json.dumps(self.__dict__, indent=4)
@@ -96,7 +130,14 @@ def ORedisSchema(cls):
         for fieldname, default_val in field_names:
             if fieldname in doc_dict:
                 val = doc_dict[fieldname]
-                setattr(inst, fieldname, int(val) if issubclass(type(default_val), int) else val)
+                cast_val = val
+                if issubclass(type(default_val), bool): # this if HAS to come before the int case, because
+                    cast_val = resolve_bool(val)
+                elif issubclass(type(default_val), int):
+                    cast_val = int(val) 
+                else:
+                    cast_val = str(val)
+                setattr(inst, fieldname, cast_val)
         
         return inst
     
@@ -141,18 +182,44 @@ def ORedisSchema(cls):
     cls.findOne: cls = findOne
 
     def insert(bulk):
-        # print(bulk)
         pipe: Connection = cls.connection.pipeline()
+        fails = 0
         for doc in bulk:
-            doc['_id'] = uuid_hex()
-            pipe.hset(f"{cls.prefix}{doc['_id']}", mapping=doc)
+            try:
+                doc['_id'] = uuid_hex()
+                for field in doc:
+                    val = doc[field]
+                    cast_val = val
+                    if issubclass(type(doc[field]), bool):
+                        cast_val = str(val)
+                    else:
+                        pass
+                    doc[field] = cast_val
+                pipe.hset(f"{cls.prefix}{doc['_id']}", mapping=doc)
+            except Exception as e:
+                fails += 1
+                print("Failed at this category:", doc["name"])
+                print("with error:", e)
 
         pipe.execute()
+        if fails > 0:
+            print(fails)
+            print("is the number of fails equal to bluk size ?", "Yes" if fails == len(bulk) else "No !")
 
     cls.insert = insert
 
     def save(self):
-        cls.connection.hset(f"{cls.prefix}{self._id}", mapping=self.__dict__)
+        self_dict = self.__dict__
+        for field in self_dict:
+            val = self_dict[field]
+            cast_val = val
+            if issubclass(type(self_dict[field]), bool):
+                cast_val = str(val)
+            else:
+                pass
+            self_dict[field] = cast_val
+        cls.connection.hset(f"{cls.prefix}{self._id}", mapping=self_dict)
+
         return self
 
     cls.save = save
@@ -160,8 +227,10 @@ def ORedisSchema(cls):
     return cls
 
 class Schema(ORedis):
+    # Schema.__init__ has to be defined in Schema because it has to replace ORedis.__init__
     def __init__(self):
-        self._id = uuid_hex()
+        # self._id = uuid_hex()
+        pass
 
     def save(self):
         pass
