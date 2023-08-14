@@ -109,6 +109,8 @@ def ORedisSchema(cls):
             cast_val = val
             if issubclass(type(default_val), bool): # this if HAS to come before the int case, because
                 cast_val = resolve_bool(val)
+            elif issubclass(type(default_val), float):
+                cast_val = float(val) 
             elif issubclass(type(default_val), int):
                 cast_val = int(val) 
             else:
@@ -133,6 +135,8 @@ def ORedisSchema(cls):
                 cast_val = val
                 if issubclass(type(default_val), bool): # this if HAS to come before the int case, because
                     cast_val = resolve_bool(val)
+                elif issubclass(type(default_val), float):
+                    cast_val = float(val) 
                 elif issubclass(type(default_val), int):
                     cast_val = int(val) 
                 else:
