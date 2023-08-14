@@ -150,12 +150,17 @@ def ORedisSchema(cls):
     def find(query):
         q_arr = []
         for field, value in query.items():
-            if issubclass(type(value), int):
-                q_arr.append(f"@{field}:[{str(value)} {str(value)}]")
-            elif issubclass(type(value), str):
-                q_arr.append(f"@{field}:{value}")
-            else:
-                q_arr.append(f"@{field}:{value}")
+            if field in field_names:
+                if issubclass(type(field_names[field]), bool):
+                    q_arr.append(f"@{field}:{str(value)}")
+                elif issubclass(type(field_names[field]), float):
+                    q_arr.append(f"@{field}:[{str(value)} {str(value)}]")
+                elif issubclass(type(field_names[field]), int):
+                    q_arr.append(f"@{field}:[{str(value)} {str(value)}]")
+                elif issubclass(type(field_names[field]), str):
+                    q_arr.append(f"@{field}:{value}")
+                else:
+                    q_arr.append(f"@{field}:{str(value)}")
         q_str = " ".join(q_arr) if bool(q_arr) else "*"
         res = cls.connection.ft(cls.index_name).search(Query(q_str))
         arr = []
@@ -169,12 +174,17 @@ def ORedisSchema(cls):
     def findOne(query) -> cls:
         q_arr = []
         for field, value in query.items():
-            if issubclass(type(value), int):
-                q_arr.append(f"@{field}:[{str(value)} {str(value)}]")
-            elif issubclass(type(value), str):
-                q_arr.append(f"@{field}:{value}")
-            else:
-                q_arr.append(f"@{field}:{value}")
+            if field in field_names:
+                if issubclass(type(field_names[field]), bool):
+                    q_arr.append(f"@{field}:{str(value)}")
+                elif issubclass(type(field_names[field]), float):
+                    q_arr.append(f"@{field}:[{str(value)} {str(value)}]")
+                elif issubclass(type(field_names[field]), int):
+                    q_arr.append(f"@{field}:[{str(value)} {str(value)}]")
+                elif issubclass(type(field_names[field]), str):
+                    q_arr.append(f"@{field}:{value}")
+                else:
+                    q_arr.append(f"@{field}:{str(value)}")
         q_str = " ".join(q_arr) if bool(q_arr) else "*"
         res = cls.connection.ft(cls.index_name).search(Query(q_str).paging(0, 1))
         one = None
