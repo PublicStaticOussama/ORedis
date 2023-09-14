@@ -161,7 +161,7 @@ def ORedisSchema(cls):
                     q_arr.append(f"@{field}:{value}")
                 else:
                     q_arr.append(f"@{field}:{str(value)}")
-        q_str = " ".join(q_arr) if bool(q_arr) else "*"
+        q_str = " ".join(q_arr) if len(q_arr) else "*"
         res = cls.connection.ft(cls.index_name).search(Query(q_str))
         arr = []
         for doc in res.docs:
@@ -197,7 +197,6 @@ def ORedisSchema(cls):
 
     def insert(bulk):
         pipe: Connection = cls.connection.pipeline()
-        fails = 0
         for doc in bulk:
             try:
                 doc['_id'] = uuid_hex()
@@ -211,16 +210,45 @@ def ORedisSchema(cls):
                     doc[field] = cast_val
                 pipe.hset(f"{cls.prefix}{doc['_id']}", mapping=doc)
             except Exception as e:
-                fails += 1
-                print("Failed at this category:", doc["name"])
-                print("with error:", e)
+                print(e)
 
         pipe.execute()
-        if fails > 0:
-            print(fails)
-            print("is the number of fails equal to bluk size ?", "Yes" if fails == len(bulk) else "No !")
 
     cls.insert = insert
+
+    def updateWhere(values, query):
+        pipe: Connection = cls.connection.pipeline()
+        q_arr = []
+        for field, value in query.items():
+            if field in field_names:
+                if issubclass(type(field_names[field]), bool):
+                    q_arr.append(f"@{field}:{str(value)}")
+                elif issubclass(type(field_names[field]), float):
+                    q_arr.append(f"@{field}:[{str(value)} {str(value)}]")
+                elif issubclass(type(field_names[field]), int):
+                    q_arr.append(f"@{field}:[{str(value)} {str(value)}]")
+                elif issubclass(type(field_names[field]), str):
+                    q_arr.append(f"@{field}:{value}")
+                else:
+                    q_arr.append(f"@{field}:{str(value)}")
+        q_str = " ".join(q_arr) if len(q_arr) else "*"
+        res = cls.connection.ft(cls.index_name).search(Query(q_str))
+        arr = []
+        for doc in res.docs:
+            doc = doc.__dict__
+            del doc["id"]
+            del doc["payload"]
+            for field, value in values.items():
+                if field in doc:
+                    doc[field] = value
+                    
+            pipe.hset(f"{cls.prefix}{doc['_id']}", mapping=doc)
+            arr.append(cls.create(doc))
+
+        pipe.execute()
+        return arr
+    
+    cls.updateWhere = updateWhere
 
     def save(self):
         self_dict = self.__dict__
@@ -263,5 +291,9 @@ class Schema(ORedis):
 
     @classmethod
     def insert(cls, bulk):
+        pass
+
+    @classmethod
+    def updateWhere(cls, values, query):
         pass
 
