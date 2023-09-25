@@ -154,19 +154,19 @@ def ORedisSchema(cls):
     
     def find(query):
         q_arr = []
-        if "$or" in query:
-            for or_field, or_values in query["$or"].items():
-                if or_field in field_names:
-                    if type(or_values) == list:
-                        if type(field_names[or_field]) == str:
-                            possible_vals = "|".join(or_values)
-                            q_arr.append(f"@{or_field}:({possible_vals})")
-                        else:
-                            raise Exception("TODO Error: $or query is only supported for str fields at the moment !")
-                    else: 
-                        raise Exception("Error: invalid $or find query, value of field key in query dict has to be a list of possibilities")
+        # if "$or" in query:
+        #     for or_field, or_values in query["$or"].items():
+        #         if or_field in field_names:
+        #             if type(or_values) == list:
+        #                 if type(field_names[or_field]) == str:
+        #                     possible_vals = "|".join(or_values)
+        #                     q_arr.append(f"@{or_field}:({possible_vals})")
+        #                 else:
+        #                     raise Exception("TODO Error: $or query is only supported for str fields at the moment !")
+        #             else: 
+        #                 raise Exception("Error: invalid $or find query, value of field key in query dict has to be a list of possibilities")
                     
-            del query["$or"] # stupid code maybe 
+        #     del query["$or"] # stupid code maybe 
         for field, value in query.items():
             if field in field_names:
                 if issubclass(type(field_names[field]), bool):
@@ -176,9 +176,21 @@ def ORedisSchema(cls):
                 elif issubclass(type(field_names[field]), int):
                     q_arr.append(f"@{field}:[{str(value)} {str(value)}]")
                 elif issubclass(type(field_names[field]), str):
-                    q_arr.append(f"@{field}:{value}")
+                    if type(value) == list:
+                    #     all_strings = all(type(val) == str for val in value) # checking if all vals are strings
+                        possible_vals = list(filter(lambda val: type(val) == str, value))
+                        possible_vals = "|".join(value)
+                        q_arr.append(f"@{field}:({possible_vals})")
+                    else:
+                        q_arr.append(f"@{field}:{value}")
                 else:
-                    q_arr.append(f"@{field}:{str(value)}")
+                    if type(value) == list:
+                    #     all_strings = all(type(val) == str for val in value) # checking if all vals are strings
+                        possible_vals = list(filter(lambda val: type(val) == str, value))
+                        possible_vals = "|".join(value)
+                        q_arr.append(f"@{field}:({possible_vals})")
+                    else:
+                        q_arr.append(f"@{field}:{value}")
         q_str = " ".join(q_arr) if len(q_arr) else "*"
         res = cls.connection.ft(cls.index_name).search(Query(q_str))
         arr = []
