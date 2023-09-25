@@ -1,3 +1,5 @@
+# TODO: any redis schema with a field called "payload", "id", "$or" has to raise an error
+
 import redis
 import time
 import json
@@ -13,6 +15,9 @@ from redis.commands.search.field import (
 from redis.commands.search.indexDefinition import IndexDefinition, IndexType
 from redis.commands.search.query import NumericFilter, Query
 import uuid
+
+def find(condition, iterable):
+    return next((item for item in iterable if condition(item)), None)
 
 def uuid_hex():
     return uuid.uuid4().hex
@@ -82,8 +87,8 @@ def ORedisSchema(cls):
     instance = cls()
 
     schema = ()
-    field_names = vars(instance).items()
-    for fieldname, value in field_names:
+    field_names = vars(instance)
+    for fieldname, value in field_names.items():
         if issubclass(type(value), bool):
             schema = schema + (TextField(fieldname),)
         elif issubclass(type(value), int):
@@ -104,7 +109,7 @@ def ORedisSchema(cls):
     def new(self, *args, **kwargs):
         original_init(self, *args, **kwargs)
         setattr(self, "_id", uuid_hex())
-        for fieldname, default_val in field_names:
+        for fieldname, default_val in field_names.items():
             val = getattr(self, fieldname)
             cast_val = val
             if issubclass(type(default_val), bool): # this if HAS to come before the int case, because
@@ -129,7 +134,7 @@ def ORedisSchema(cls):
     def create(doc_dict):
         inst = cls()
         setattr(inst, "_id", uuid_hex())
-        for fieldname, default_val in field_names:
+        for fieldname, default_val in field_names.items():
             if fieldname in doc_dict:
                 val = doc_dict[fieldname]
                 cast_val = val
@@ -149,6 +154,19 @@ def ORedisSchema(cls):
     
     def find(query):
         q_arr = []
+        if "$or" in query:
+            for or_field, or_values in query["$or"].items():
+                if or_field in field_names:
+                    if type(or_values) == list:
+                        if type(field_names[or_field]) == str:
+                            possible_vals = "|".join(or_values)
+                            q_arr.append(f"@{or_field}:({possible_vals})")
+                        else:
+                            raise Exception("TODO Error: $or query is only supported for str fields at the moment !")
+                    else: 
+                        raise Exception("Error: invalid $or find query, value of field key in query dict has to be a list of possibilities")
+                    
+            del query["$or"] # stupid code maybe 
         for field, value in query.items():
             if field in field_names:
                 if issubclass(type(field_names[field]), bool):
