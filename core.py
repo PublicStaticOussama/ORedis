@@ -167,31 +167,43 @@ def ORedisSchema(cls):
         #                 raise Exception("Error: invalid $or find query, value of field key in query dict has to be a list of possibilities")
                     
         #     del query["$or"] # stupid code maybe 
+
         for field, value in query.items():
             if field in field_names:
+                ne_prefix = ""
+                if type(value) == dict:
+                    if "$ne" in value:
+                        ne_prefix = "-"
+                        value = value["$ne"]
+                    else: 
+                        raise Exception(f"Error: Invalid value given to field: {field}, {str(value)}")
+
                 if issubclass(type(field_names[field]), bool):
-                    q_arr.append(f"@{field}:{str(value)}")
+                    q_arr.append(f"{ne_prefix}@{field}:{str(value)}")
                 elif issubclass(type(field_names[field]), float):
-                    q_arr.append(f"@{field}:[{str(value)} {str(value)}]")
+                    q_arr.append(f"{ne_prefix}@{field}:[{str(value)} {str(value)}]")
                 elif issubclass(type(field_names[field]), int):
-                    q_arr.append(f"@{field}:[{str(value)} {str(value)}]")
+                    q_arr.append(f"{ne_prefix}@{field}:[{str(value)} {str(value)}]")
                 elif issubclass(type(field_names[field]), str):
                     if type(value) == list:
                     #     all_strings = all(type(val) == str for val in value) # checking if all vals are strings
-                        possible_vals = list(filter(lambda val: type(val) == str, value))
+                        possible_vals = filter(lambda val: type(val) == str, value)
+                        possible_vals = list(map(lambda val: f'"{val}"', possible_vals))
                         possible_vals = "|".join(value)
-                        q_arr.append(f"@{field}:({possible_vals})")
+                        q_arr.append(f"{ne_prefix}@{field}:({possible_vals})")
                     else:
-                        q_arr.append(f"@{field}:{value}")
+                        q_arr.append(f"{ne_prefix}@{field}:\"{value}\"")
                 else:
                     if type(value) == list:
                     #     all_strings = all(type(val) == str for val in value) # checking if all vals are strings
-                        possible_vals = list(filter(lambda val: type(val) == str, value))
+                        possible_vals = filter(lambda val: type(val) == str, value)
+                        possible_vals = list(map(lambda val: f'"{val}"', possible_vals))
                         possible_vals = "|".join(value)
-                        q_arr.append(f"@{field}:({possible_vals})")
+                        q_arr.append(f"{ne_prefix}@{field}:({possible_vals})")
                     else:
-                        q_arr.append(f"@{field}:{value}")
+                        q_arr.append(f"{ne_prefix}@{field}:\"{value}\"")
         q_str = " ".join(q_arr) if len(q_arr) else "*"
+        print(q_str)
         res = cls.connection.ft(cls.index_name).search(Query(q_str))
         arr = []
         for doc in res.docs:
@@ -205,16 +217,38 @@ def ORedisSchema(cls):
         q_arr = []
         for field, value in query.items():
             if field in field_names:
+                ne_prefix = ""
+                if type(value) == dict:
+                    if "$ne" in value:
+                        ne_prefix = "-"
+                        value = value["$ne"]
+                    else: 
+                        raise Exception(f"Error: Invalid value given to field: {field}, {str(value)}")
+
                 if issubclass(type(field_names[field]), bool):
-                    q_arr.append(f"@{field}:{str(value)}")
+                    q_arr.append(f"{ne_prefix}@{field}:{str(value)}")
                 elif issubclass(type(field_names[field]), float):
-                    q_arr.append(f"@{field}:[{str(value)} {str(value)}]")
+                    q_arr.append(f"{ne_prefix}@{field}:[{str(value)} {str(value)}]")
                 elif issubclass(type(field_names[field]), int):
-                    q_arr.append(f"@{field}:[{str(value)} {str(value)}]")
+                    q_arr.append(f"{ne_prefix}@{field}:[{str(value)} {str(value)}]")
                 elif issubclass(type(field_names[field]), str):
-                    q_arr.append(f"@{field}:{value}")
+                    if type(value) == list:
+                    #     all_strings = all(type(val) == str for val in value) # checking if all vals are strings
+                        possible_vals = filter(lambda val: type(val) == str, value)
+                        possible_vals = list(map(lambda val: f'"{val}"', possible_vals))
+                        possible_vals = "|".join(value)
+                        q_arr.append(f"{ne_prefix}@{field}:({possible_vals})")
+                    else:
+                        q_arr.append(f"{ne_prefix}@{field}:\"{value}\"")
                 else:
-                    q_arr.append(f"@{field}:{str(value)}")
+                    if type(value) == list:
+                    #     all_strings = all(type(val) == str for val in value) # checking if all vals are strings
+                        possible_vals = filter(lambda val: type(val) == str, value)
+                        possible_vals = list(map(lambda val: f'"{val}"', possible_vals))
+                        possible_vals = "|".join(value)
+                        q_arr.append(f"{ne_prefix}@{field}:({possible_vals})")
+                    else:
+                        q_arr.append(f"{ne_prefix}@{field}:\"{value}\"")
         q_str = " ".join(q_arr) if bool(q_arr) else "*"
         res = cls.connection.ft(cls.index_name).search(Query(q_str).paging(0, 1))
         one = None
@@ -251,16 +285,38 @@ def ORedisSchema(cls):
         q_arr = []
         for field, value in query.items():
             if field in field_names:
+                ne_prefix = ""
+                if type(value) == dict:
+                    if "$ne" in value:
+                        ne_prefix = "-"
+                        value = value["$ne"]
+                    else: 
+                        raise Exception(f"Error: Invalid value given to field: {field}, {str(value)}")
+
                 if issubclass(type(field_names[field]), bool):
-                    q_arr.append(f"@{field}:{str(value)}")
+                    q_arr.append(f"{ne_prefix}@{field}:{str(value)}")
                 elif issubclass(type(field_names[field]), float):
-                    q_arr.append(f"@{field}:[{str(value)} {str(value)}]")
+                    q_arr.append(f"{ne_prefix}@{field}:[{str(value)} {str(value)}]")
                 elif issubclass(type(field_names[field]), int):
-                    q_arr.append(f"@{field}:[{str(value)} {str(value)}]")
+                    q_arr.append(f"{ne_prefix}@{field}:[{str(value)} {str(value)}]")
                 elif issubclass(type(field_names[field]), str):
-                    q_arr.append(f"@{field}:{value}")
+                    if type(value) == list:
+                    #     all_strings = all(type(val) == str for val in value) # checking if all vals are strings
+                        possible_vals = filter(lambda val: type(val) == str, value)
+                        possible_vals = list(map(lambda val: f'"{val}"', possible_vals))
+                        possible_vals = "|".join(value)
+                        q_arr.append(f"{ne_prefix}@{field}:({possible_vals})")
+                    else:
+                        q_arr.append(f"{ne_prefix}@{field}:\"{value}\"")
                 else:
-                    q_arr.append(f"@{field}:{str(value)}")
+                    if type(value) == list:
+                    #     all_strings = all(type(val) == str for val in value) # checking if all vals are strings
+                        possible_vals = filter(lambda val: type(val) == str, value)
+                        possible_vals = list(map(lambda val: f'"{val}"', possible_vals))
+                        possible_vals = "|".join(value)
+                        q_arr.append(f"{ne_prefix}@{field}:({possible_vals})")
+                    else:
+                        q_arr.append(f"{ne_prefix}@{field}:\"{value}\"")
         q_str = " ".join(q_arr) if len(q_arr) else "*"
         res = cls.connection.ft(cls.index_name).search(Query(q_str))
         arr = []
