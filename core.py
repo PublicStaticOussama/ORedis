@@ -413,7 +413,11 @@ class Schema(ORedis):
         pass
 
     @classmethod
-    def find(cls, query):
+    def find(cls, query, start=0, end=10_000):
+        pass
+
+    @classmethod
+    def findAsDict(cls, query, start=0, end=10_000):
         pass
 
     @classmethod
