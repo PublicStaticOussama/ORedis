@@ -86,9 +86,11 @@ def ORedisSchema(cls):
     
     instance = cls()
 
-    schema = ()
+    schema = (TextField("_id"),)
     field_names = vars(instance)
     for fieldname, value in field_names.items():
+        if fieldname in ["payload", "id", "$ne"]:
+            raise Exception(f"TODO Error: cannot use {fieldname} as a field name at the moment")
         if issubclass(type(value), bool):
             schema = schema + (TextField(fieldname),)
         elif issubclass(type(value), int):
@@ -108,7 +110,7 @@ def ORedisSchema(cls):
 
     def new(self, *args, **kwargs):
         original_init(self, *args, **kwargs)
-        setattr(self, "_id", uuid_hex())
+        setattr(self, "_id", str(uuid_hex()))
         for fieldname, default_val in field_names.items():
             val = getattr(self, fieldname)
             cast_val = val
@@ -133,7 +135,7 @@ def ORedisSchema(cls):
 
     def create(doc_dict):
         inst = cls()
-        setattr(inst, "_id", uuid_hex())
+        setattr(inst, "_id", str(uuid_hex()))
         for fieldname, default_val in field_names.items():
             if fieldname in doc_dict:
                 val = doc_dict[fieldname]
@@ -152,9 +154,44 @@ def ORedisSchema(cls):
     
     cls.create = create
     
-    def find(query):
+    def _resolve_value_by_fieldname(field, value):
+        final_val = value
+        if issubclass(type(field_names[field]), bool):
+            final_val = f'"{str(value)}"'
+        elif issubclass(type(field_names[field]), float):
+            final_val = f"[{str(value)} {str(value)}]"
+        elif issubclass(type(field_names[field]), int):
+            final_val = f"[{str(value)} {str(value)}]"
+        elif issubclass(type(field_names[field]), str):
+            if type(value) == list:
+            #     all_strings = all(type(val) == str for val in value) # checking if all vals are strings
+                possible_vals = filter(lambda val: type(val) == str, value)
+                possible_vals = list(map(lambda val: f'"{val}"', possible_vals))
+                possible_vals = "|".join(value)
+                final_val = f"({possible_vals})"
+            else:
+                final_val = f'"{value}"'
+        else:
+            if type(value) == list:
+            #     all_strings = all(type(val) == str for val in value) # checking if all vals are strings
+                possible_vals = filter(lambda val: type(val) == str, value)
+                possible_vals = list(map(lambda val: f'"{val}"', possible_vals))
+                possible_vals = "|".join(value)
+                final_val = f"({possible_vals})"
+            else:
+                final_val = f'"{value}"'
+
+        return final_val
+
+    def find(query, start=0, end=10_000):
+        if (end - start) > 10_000:
+            raise Exception(f"Error: you can only query 10,000 elements at a time")
         q_arr = []
+        sep = " "
         # if "$or" in query:
+        #     print("ORRRRRR !!!!!!")
+        #     sep = " | "
+        #     query = query["$or"]
         #     for or_field, or_values in query["$or"].items():
         #         if or_field in field_names:
         #             if type(or_values) == list:
@@ -166,7 +203,7 @@ def ORedisSchema(cls):
         #             else: 
         #                 raise Exception("Error: invalid $or find query, value of field key in query dict has to be a list of possibilities")
                     
-        #     del query["$or"] # stupid code maybe 
+            # del query["$or"] # stupid code maybe 
 
         for field, value in query.items():
             if field in field_names:
@@ -178,33 +215,12 @@ def ORedisSchema(cls):
                     else: 
                         raise Exception(f"Error: Invalid value given to field: {field}, {str(value)}")
 
-                if issubclass(type(field_names[field]), bool):
-                    q_arr.append(f"{ne_prefix}@{field}:{str(value)}")
-                elif issubclass(type(field_names[field]), float):
-                    q_arr.append(f"{ne_prefix}@{field}:[{str(value)} {str(value)}]")
-                elif issubclass(type(field_names[field]), int):
-                    q_arr.append(f"{ne_prefix}@{field}:[{str(value)} {str(value)}]")
-                elif issubclass(type(field_names[field]), str):
-                    if type(value) == list:
-                    #     all_strings = all(type(val) == str for val in value) # checking if all vals are strings
-                        possible_vals = filter(lambda val: type(val) == str, value)
-                        possible_vals = list(map(lambda val: f'"{val}"', possible_vals))
-                        possible_vals = "|".join(value)
-                        q_arr.append(f"{ne_prefix}@{field}:({possible_vals})")
-                    else:
-                        q_arr.append(f"{ne_prefix}@{field}:\"{value}\"")
-                else:
-                    if type(value) == list:
-                    #     all_strings = all(type(val) == str for val in value) # checking if all vals are strings
-                        possible_vals = filter(lambda val: type(val) == str, value)
-                        possible_vals = list(map(lambda val: f'"{val}"', possible_vals))
-                        possible_vals = "|".join(value)
-                        q_arr.append(f"{ne_prefix}@{field}:({possible_vals})")
-                    else:
-                        q_arr.append(f"{ne_prefix}@{field}:\"{value}\"")
-        q_str = " ".join(q_arr) if len(q_arr) else "*"
+                final_val = _resolve_value_by_fieldname(field, value)
+                q_arr.append(f"{ne_prefix}@{field}:{final_val}")
+
+        q_str = sep.join(q_arr) if len(q_arr) else "*"
         print(q_str)
-        res = cls.connection.ft(cls.index_name).search(Query(q_str))
+        res = cls.connection.ft(cls.index_name).search(Query(q_str).paging(start, end))
         arr = []
         for doc in res.docs:
             arr.append(cls.create(doc.__dict__))
@@ -212,6 +228,35 @@ def ORedisSchema(cls):
         return arr 
 
     cls.find = find
+
+    def findAsDict(query, start=0, end=10_000):
+        if (end - start) > 10_000:
+            raise Exception(f"Error: you can only query 10,000 elements at a time")
+        q_arr = []
+        sep = " "
+        for field, value in query.items():
+            if field in field_names:
+                ne_prefix = ""
+                if type(value) == dict:
+                    if "$ne" in value:
+                        ne_prefix = "-"
+                        value = value["$ne"]
+                    else: 
+                        raise Exception(f"Error: Invalid value given to field: {field}, {str(value)}")
+
+                final_val = _resolve_value_by_fieldname(field, value)
+                q_arr.append(f"{ne_prefix}@{field}:{final_val}")
+
+        q_str = sep.join(q_arr) if len(q_arr) else "*"
+        print(q_str)
+        res = cls.connection.ft(cls.index_name).search(Query(q_str).paging(start, end))
+        arr = []
+        for doc in res.docs:
+            arr.append(doc.__dict__)
+        
+        return arr 
+
+    cls.findAsDict = findAsDict
 
     def findOne(query) -> cls:
         q_arr = []
@@ -263,7 +308,7 @@ def ORedisSchema(cls):
         pipe: Connection = cls.connection.pipeline()
         for doc in bulk:
             try:
-                doc['_id'] = uuid_hex()
+                doc['_id'] = str(uuid_hex())
                 for field in doc:
                     val = doc[field]
                     cast_val = val
@@ -318,7 +363,7 @@ def ORedisSchema(cls):
                     else:
                         q_arr.append(f"{ne_prefix}@{field}:\"{value}\"")
         q_str = " ".join(q_arr) if len(q_arr) else "*"
-        res = cls.connection.ft(cls.index_name).search(Query(q_str))
+        res = cls.connection.ft(cls.index_name).search(Query(q_str).paging(0, 10_000))
         arr = []
         for doc in res.docs:
             doc = doc.__dict__
@@ -357,7 +402,7 @@ def ORedisSchema(cls):
 class Schema(ORedis):
     # Schema.__init__ has to be defined in Schema because it has to replace ORedis.__init__
     def __init__(self):
-        # self._id = uuid_hex()
+        # self._id = str(uuid_hex())
         pass
 
     def save(self):
