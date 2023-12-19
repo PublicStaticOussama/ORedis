@@ -49,8 +49,14 @@ async def main():
     # Queries:
     # any query has to be built first by channing either of these functions [one of the 'find' queries, sortBy, limit] using the builder pattern
     # after building a query you need to run .exec() on it in order to get its result
-    people: Person = await Person.find({}).exec()
-    print("find query:")
+    print("find query before flush:")
+    people = await Person.find({}).exec()
+    print(people)
+
+    ORedis.connection.flushdb()
+
+    print("find query after flush:")
+    people = await Person.find({}).exec()
     print(people)
 
 # wrapping the asyncio event loop to enable the await keyword
