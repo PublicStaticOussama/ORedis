@@ -53,7 +53,7 @@ async def main():
     people = await Person.find({}).exec()
     print(people)
 
-    ORedis.connection.flushdb()
+    await ORedis.connection.flushdb()
 
     print("find query after flush:")
     people = await Person.find({}).exec()
