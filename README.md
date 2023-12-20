@@ -10,7 +10,7 @@ when using ORedis it is required to connect to the redis server first using the 
 for now ORedis dependens on asyncio coroutines (asyncio plays the same role as Node.js's event loop, coroutines are kind of like Promises in javascript)
 
 
-```
+```python
 import asyncio
 from core import ORedis
 
@@ -20,7 +20,7 @@ om = ORedis(host='localhost', port=6381, db=0, flush=False) # flush=False clears
 ### Schema and the @ORedisSchema decorator
 after connecting using the ORedis class it is important to create a schema decorated with the ORedisSchema decorator and implementing the Schema interface of ORedis
 
-```
+```python
 from core import ORedisSchema, Schema
 
 @ORedisSchema
@@ -38,7 +38,7 @@ class Person(Schema):
 ### Usage
 we define an async main function in order to wrap it with the asyncio event loop later
 
-```
+```python
 async def main():
     # there two types of operations possible in ORedis Updates, and Queries
 
