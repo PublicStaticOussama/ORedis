@@ -3,6 +3,7 @@
 import redis as red
 import redis.asyncio as redis
 import time
+from datetime import datetime
 import json
 import inspect
 import traceback
@@ -17,6 +18,10 @@ from redis.commands.search.field import (
 from redis.commands.search.indexDefinition import IndexDefinition, IndexType
 from redis.commands.search.query import NumericFilter, Query
 import uuid
+
+def get_current_timestamp():
+    current = (datetime.utcnow() - datetime(1970, 1, 1)).total_seconds()
+    return int(current)
 
 def find(condition, iterable):
     return next((item for item in iterable if condition(item)), None)
@@ -148,8 +153,8 @@ def ORedisSchema(cls):
             setattr(self, fieldname, cast_val)
 
         setattr(self, "_id", str(uuid_hex()))
-        setattr(self, "created_at", int(time.time()))
-        setattr(self, "updated_at", int(time.time()))
+        setattr(self, "created_at", get_current_timestamp())
+        setattr(self, "updated_at", get_current_timestamp())
 
     cls.__init__ = new
 
@@ -176,8 +181,8 @@ def ORedisSchema(cls):
                 setattr(inst, fieldname, cast_val)
 
         setattr(inst, "_id", str(uuid_hex()))
-        setattr(inst, "created_at", int(time.time()))
-        setattr(inst, "updated_at", int(time.time()))
+        setattr(inst, "created_at", get_current_timestamp())
+        setattr(inst, "updated_at", get_current_timestamp())
         
         return inst
     
@@ -310,8 +315,8 @@ def ORedisSchema(cls):
                         else:
                             pass 
                         doc[field] = cast_val
-                    doc['created_at'] = int(time.time())
-                    doc['updated_at'] = int(time.time())
+                    doc['created_at'] = get_current_timestamp()
+                    doc['updated_at'] = get_current_timestamp()
                     pipe_tmp = pipe_tmp.hset(f"{cls.prefix}{doc['_id']}", mapping=doc)
                     # pipe.hset(f"{cls.prefix}{doc['_id']}", mapping=doc)
                 except Exception as e:
@@ -372,7 +377,7 @@ def ORedisSchema(cls):
                 for field, value in values.items():
                     if field in doc:
                         doc[field] = value
-                doc['updated_at'] = int(time.time())
+                doc['updated_at'] = get_current_timestamp()
                 pipe_tmp = pipe_tmp.hset(f"{cls.prefix}{doc['_id']}", mapping=doc)
                 arr.append(cls.create(doc))
 
@@ -392,7 +397,7 @@ def ORedisSchema(cls):
             else:
                 pass
             self_dict[field] = cast_val
-        self_dict['updated_at'] = int(time.time())
+        self_dict['updated_at'] = get_current_timestamp()
         ok = await cls.connection.hset(f"{cls.prefix}{self._id}", mapping=self_dict)
 
         return self
