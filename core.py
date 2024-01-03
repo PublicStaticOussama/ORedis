@@ -387,6 +387,13 @@ def ORedisSchema(cls):
     
     cls.updateWhere = updateWhere
 
+    async def deleteAll():
+        await cls.connection.ft(cls.index_name).dropindex(delete_documents=True)
+        cls.sync.ft(cls.index_name).create_index(schema, definition=definition)
+        waitForIndex(cls.sync, cls.index_name)
+
+    cls.deleteAll = deleteAll
+
     async def save(self):
         self_dict = self.__dict__
         for field in self_dict:
@@ -443,6 +450,10 @@ class Schema(ORedis):
 
     @classmethod
     def updateWhere(cls, values, query):
+        pass
+
+    @classmethod
+    def deleteAll(cls):
         pass
 
 class OQuery(OQueryInterface):
