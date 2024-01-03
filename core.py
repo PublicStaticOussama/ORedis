@@ -50,12 +50,12 @@ def waitForIndex(env, idx, timeout=None):
             if int(res[res.index("indexing") + 1]) == 0:
                 break
         except ValueError:
-            traceback_info = traceback.format_exc()
-            print(" +", traceback_info)
+            # traceback_info = traceback.format_exc()
+            # print(" +", traceback_info)
             break
         except AttributeError:
-            traceback_info = traceback.format_exc()
-            print(" +", traceback_info)
+            # traceback_info = traceback.format_exc()
+            # print(" +", traceback_info)
             try:
                 if int(res["indexing"]) == 0:
                     break
@@ -131,9 +131,10 @@ def ORedisSchema(cls):
         cls.sync.ft(cls.index_name).create_index(schema, definition=definition)
         waitForIndex(cls.sync, cls.index_name)
     except Exception as e:
-        traceback_info = traceback.format_exc()
-        print(" +", traceback_info)
-        print(e)
+        # traceback_info = traceback.format_exc()
+        # print(" +", traceback_info)
+        # print(e)
+        print("[ORedis] Info: Index exists already")
 
     original_init = cls.__init__
 
