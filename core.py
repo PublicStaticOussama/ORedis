@@ -512,7 +512,7 @@ class Schema(ORedis):
         pass
 
     @classmethod
-    def termsAgg(fieldname: str):
+    def termsAgg(cls, fieldname: str):
         pass
 
 class OQuery(OQueryInterface):
