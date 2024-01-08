@@ -275,7 +275,8 @@ def ORedisSchema(cls):
             return results
         
         return []
-                
+
+    cls.termsAgg = termsAgg        
 
     def find(query) -> OQuery:
         q_arr = []
@@ -508,6 +509,10 @@ class Schema(ORedis):
 
     @classmethod
     def deleteAll(cls):
+        pass
+
+    @classmethod
+    def termsAgg(fieldname: str):
         pass
 
 class OQuery(OQueryInterface):
