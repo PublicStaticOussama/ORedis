@@ -1,4 +1,9 @@
-# TODO: any redis schema with a field called "payload", "id", "$or" has to raise an error
+##########################################################################
+##########################################################################
+# TODO: exec asDict field results shoulb be casted to their correct types
+##########################################################################
+##########################################################################
+
 
 import redis as red
 import redis.asyncio as redis
@@ -17,6 +22,8 @@ from redis.commands.search.field import (
 )
 from redis.commands.search.indexDefinition import IndexDefinition, IndexType
 from redis.commands.search.query import NumericFilter, Query
+import redis.commands.search.aggregation as aggregations
+import redis.commands.search.reducers as reducers
 import uuid
 
 def get_current_timestamp():
@@ -79,7 +86,7 @@ class ORedis:
         self.connection = ORedis.connection
         ORedis.sync = red.Redis(host=host, port=port, db=db)
         self.sync = red.Redis(host=host, port=port, db=db)
-        # self.connection.ft().search(Query())
+        # self.connection.ft().aggregate()
         # if flush:
         #     await self.connection.flushdb()
 
@@ -148,7 +155,7 @@ def ORedisSchema(cls):
             elif issubclass(type(default_val), float):
                 cast_val = float(val) 
             elif issubclass(type(default_val), int):
-                cast_val = int(val) 
+                cast_val = int(val)
             else:
                 cast_val = str(val)
             setattr(self, fieldname, cast_val)
@@ -223,6 +230,52 @@ def ORedisSchema(cls):
                 final_val = f'"{value}"'
 
         return final_val
+    
+    async def termsAgg(fieldname: str):
+        if fieldname in field_names:
+            req = aggregations.AggregateRequest("*").group_by(
+                f"@{fieldname}", reducers.count()
+            )
+
+            res = ORedis.sync.ft(cls.index_name).aggregate(req)
+            results = []
+
+            for row in res.rows:
+                if bytes(fieldname, 'utf-8') not in row:
+                    continue
+                i = row.index(bytes(fieldname, 'utf-8'))
+                if len(row) < i + 1:
+                    value = row[i+1]
+                    cast_val = value
+                    if issubclass(type(field_names[fieldname]), bool): 
+                        cast_val = resolve_bool(value)
+                    elif issubclass(type(field_names[fieldname]), float):
+                        cast_val = float(value) 
+                    elif issubclass(type(field_names[fieldname]), int):
+                        cast_val = int(value)
+                    elif issubclass(type(field_names[fieldname]), bytes):
+                        cast_val =  str(value, 'utf-8')
+                    else:
+                        cast_val = str(value)
+
+                    if b"__generated_aliascount" not in row:
+                        raise Exception()
+                    ii = row.index(b"__generated_aliascount")
+                    doc_count = 0
+                    if len(row) < ii + 1:
+                        doc_count = int(row[i+1])
+                    else:
+                        raise Exception()
+                    
+                    results.append({
+                        f"{fieldname}": cast_val,
+                        "doc_count": doc_count
+                    })
+
+            return results
+        
+        return []
+                
 
     def find(query) -> OQuery:
         q_arr = []
