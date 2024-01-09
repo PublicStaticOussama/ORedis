@@ -245,9 +245,13 @@ def ORedisSchema(cls):
 
             for row in res.rows:
                 if bytes(fieldname, 'utf-8') not in row:
+                    print(bytes(fieldname, 'utf-8'))
+                    print("=========> NOT IN ROW")
+                    print(row)
                     continue
                 i = row.index(bytes(fieldname, 'utf-8'))
                 if len(row) < i + 1:
+                    print("good there is a next !!!!")
                     value = row[i+1]
                     cast_val = value
                     if issubclass(type(field_names[fieldname]), bool): 
