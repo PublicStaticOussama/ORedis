@@ -273,7 +273,7 @@ def ORedisSchema(cls):
                     ii = row.index(b"__generated_aliascount")
                     doc_count = 0
                     if ii + 1 < len(row):
-                        doc_count = int(row[i+1])
+                        doc_count = int(row[ii+1])
                     else:
                         raise Exception()
                     
