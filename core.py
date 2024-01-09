@@ -235,6 +235,7 @@ def ORedisSchema(cls):
         print(field_names.keys())
         print("============================================")
         print(fieldname)
+        print("field in fieldNames", fieldname in field_names)
         if fieldname in field_names:
             req = aggregations.AggregateRequest("*").group_by(
                 f"@{fieldname}", reducers.count()
@@ -250,6 +251,7 @@ def ORedisSchema(cls):
                     print(row)
                     continue
                 i = row.index(bytes(fieldname, 'utf-8'))
+                print(len(row))
                 if len(row) < i + 1:
                     print("good there is a next !!!!")
                     value = row[i+1]
