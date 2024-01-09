@@ -264,9 +264,9 @@ def ORedisSchema(cls):
                     elif issubclass(type(field_names[fieldname]), int):
                         cast_val = int(value)
                     elif issubclass(type(field_names[fieldname]), bytes):
-                        cast_val =  str(value, 'utf-8')
+                        cast_val =  bytes(fieldname, 'utf-8')
                     else:
-                        cast_val = str(value)
+                        cast_val = str(value, 'utf-8')
 
                     if b"__generated_aliascount" not in row:
                         raise Exception()
