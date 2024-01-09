@@ -232,6 +232,9 @@ def ORedisSchema(cls):
         return final_val
     
     async def termsAgg(fieldname: str):
+        print(field_names.keys())
+        print("============================================")
+        print(fieldname)
         if fieldname in field_names:
             req = aggregations.AggregateRequest("*").group_by(
                 f"@{fieldname}", reducers.count()
