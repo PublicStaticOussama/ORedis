@@ -251,6 +251,7 @@ def ORedisSchema(cls):
                     print(row)
                     continue
                 i = row.index(bytes(fieldname, 'utf-8'))
+                print(i)
                 print(len(row))
                 if len(row) < i + 1:
                     print("good there is a next !!!!")
