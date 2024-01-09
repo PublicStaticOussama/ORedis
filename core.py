@@ -237,7 +237,7 @@ def ORedisSchema(cls):
                 f"@{fieldname}", reducers.count()
             )
 
-            res = ORedis.sync.ft(cls.index_name).aggregate(req)
+            res = await ORedis.connection.ft(cls.index_name).aggregate(req)
             results = []
 
             for row in res.rows:
