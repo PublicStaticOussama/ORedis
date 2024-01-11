@@ -319,6 +319,7 @@ def ORedisSchema(cls):
 
     async def findOne(query, sort_by="created_at", asc=False) -> cls:
         q_arr = []
+        sep = " "
         for field, value in query.items():
             if field in field_names:
                 ne_prefix = ""
@@ -327,31 +328,11 @@ def ORedisSchema(cls):
                         ne_prefix = "-"
                         value = value["$ne"]
 
-                if issubclass(type(field_names[field]), bool):
-                    q_arr.append(f"{ne_prefix}@{field}:{str(value)}")
-                elif issubclass(type(field_names[field]), float):
-                    q_arr.append(f"{ne_prefix}@{field}:[{str(value)} {str(value)}]")
-                elif issubclass(type(field_names[field]), int):
-                    q_arr.append(f"{ne_prefix}@{field}:[{str(value)} {str(value)}]")
-                elif issubclass(type(field_names[field]), str):
-                    if type(value) == list:
-                    #     all_strings = all(type(val) == str for val in value) # checking if all vals are strings
-                        possible_vals = filter(lambda val: type(val) == str, value)
-                        possible_vals = list(map(lambda val: f'"{val}"', possible_vals))
-                        possible_vals = "|".join(value)
-                        q_arr.append(f"{ne_prefix}@{field}:({possible_vals})")
-                    else:
-                        q_arr.append(f"{ne_prefix}@{field}:\"{value}\"")
-                else:
-                    if type(value) == list:
-                    #     all_strings = all(type(val) == str for val in value) # checking if all vals are strings
-                        possible_vals = filter(lambda val: type(val) == str, value)
-                        possible_vals = list(map(lambda val: f'"{val}"', possible_vals))
-                        possible_vals = "|".join(value)
-                        q_arr.append(f"{ne_prefix}@{field}:({possible_vals})")
-                    else:
-                        q_arr.append(f"{ne_prefix}@{field}:\"{value}\"")
-        q_str = " ".join(q_arr) if bool(q_arr) else "*"
+                final_val = _resolve_value_by_fieldname(field, value)
+                q_arr.append(f"{ne_prefix}@{field}:{final_val}")
+
+        q_str = sep.join(q_arr) if bool(q_arr) else "*"
+        print(q_str)
         if sort_by is not None:
             res = await cls.connection.ft(cls.index_name).search(Query(q_str).sort_by(sort_by, asc=bool(asc)).paging(0, 1))
         else:
@@ -398,6 +379,7 @@ def ORedisSchema(cls):
         async with cls.connection.pipeline() as pipe:
             pipe_tmp = pipe
             q_arr = []
+            sep = " "
             for field, value in query.items():
                 if field in field_names:
                     ne_prefix = ""
@@ -408,32 +390,11 @@ def ORedisSchema(cls):
                         else: 
                             raise Exception(f"Error: Invalid value given to field: {field}, {str(value)}")
 
-                    if issubclass(type(field_names[field]), bool):
-                        q_arr.append(f"{ne_prefix}@{field}:{str(value)}")
-                    elif issubclass(type(field_names[field]), float):
-                        q_arr.append(f"{ne_prefix}@{field}:[{str(value)} {str(value)}]")
-                    elif issubclass(type(field_names[field]), int):
-                        q_arr.append(f"{ne_prefix}@{field}:[{str(value)} {str(value)}]")
-                    elif issubclass(type(field_names[field]), str):
-                        if type(value) == list:
-                        #     all_strings = all(type(val) == str for val in value) # checking if all vals are strings
-                            possible_vals = filter(lambda val: type(val) == str, value)
-                            possible_vals = list(map(lambda val: f'"{val}"', possible_vals))
-                            possible_vals = "|".join(value)
-                            q_arr.append(f"{ne_prefix}@{field}:({possible_vals})")
-                        else:
-                            q_arr.append(f"{ne_prefix}@{field}:\"{value}\"")
-                    else:
-                        if type(value) == list:
-                        #     all_strings = all(type(val) == str for val in value) # checking if all vals are strings
-                            possible_vals = filter(lambda val: type(val) == str, value)
-                            possible_vals = list(map(lambda val: f'"{val}"', possible_vals))
-                            possible_vals = "|".join(value)
-                            q_arr.append(f"{ne_prefix}@{field}:({possible_vals})")
-                        else:
-                            q_arr.append(f"{ne_prefix}@{field}:\"{value}\"")
-            q_str = " ".join(q_arr) if len(q_arr) else "*"
-            res = await cls.connection.ft(cls.index_name).search(Query(q_str).paging(0, 10_000))
+                    final_val = _resolve_value_by_fieldname(field, value)
+                    q_arr.append(f"{ne_prefix}@{field}:{final_val}")
+
+            q_str = sep.join(q_arr) if len(q_arr) else "*"
+            res = await cls.connection.ft(cls.index_name).search(Query(q_str).sort_by("created_at", asc=False).paging(0, 10_000))
             arr = []
             for doc in res.docs:
                 doc = doc.__dict__
@@ -458,6 +419,25 @@ def ORedisSchema(cls):
         waitForIndex(cls.sync, cls.index_name)
 
     cls.deleteAll = deleteAll
+
+    async def addFields(new_schema: dict):
+        schema = ()
+        for fieldname, typ in new_schema.items():
+            if fieldname not in field_names:
+                if fieldname in ["payload", "id", "$ne"]:
+                    raise Exception(f"TODO Error: cannot use {fieldname} as a field name at the moment")
+                if issubclass(typ, bool):
+                    schema = schema + (TextField(fieldname),)
+                elif issubclass(typ, int):
+                    schema = schema + (NumericField(fieldname),)
+                elif issubclass(typ, str):
+                    schema = schema + (TextField(fieldname),)
+                else:
+                    schema = schema + (TextField(fieldname),)
+
+        await cls.connection.ft(cls.index_name).alter_schema_add(schema)
+
+    cls.addFields = addFields
 
     async def save(self):
         self_dict = self.__dict__
