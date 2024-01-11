@@ -406,7 +406,7 @@ def ORedisSchema(cls):
                             doc[field] = str(value).lower()
                         else:
                             doc[field] = value
-                            
+
                 doc['updated_at'] = get_current_timestamp()
                 pipe_tmp = pipe_tmp.hset(f"{cls.prefix}{doc['_id']}", mapping=doc)
                 arr.append(cls.create(doc))
@@ -438,6 +438,8 @@ def ORedisSchema(cls):
                     schema = schema + (TextField(fieldname),)
                 else:
                     schema = schema + (TextField(fieldname),)
+        
+        print(schema)
 
         await cls.connection.ft(cls.index_name).alter_schema_add(schema)
 
