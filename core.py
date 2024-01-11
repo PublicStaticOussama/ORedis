@@ -402,7 +402,11 @@ def ORedisSchema(cls):
                 del doc["payload"]
                 for field, value in values.items():
                     if field in field_names:
-                        doc[field] = value
+                        if type(value) == bool:
+                            doc[field] = str(value).lower()
+                        else:
+                            doc[field] = value
+                            
                 doc['updated_at'] = get_current_timestamp()
                 pipe_tmp = pipe_tmp.hset(f"{cls.prefix}{doc['_id']}", mapping=doc)
                 arr.append(cls.create(doc))
