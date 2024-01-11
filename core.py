@@ -401,7 +401,7 @@ def ORedisSchema(cls):
                 del doc["id"]
                 del doc["payload"]
                 for field, value in values.items():
-                    if field in doc:
+                    if field in field_names:
                         doc[field] = value
                 doc['updated_at'] = get_current_timestamp()
                 pipe_tmp = pipe_tmp.hset(f"{cls.prefix}{doc['_id']}", mapping=doc)
@@ -475,6 +475,10 @@ class Schema(ORedis):
         pass
 
     def save(self):
+        pass
+
+    @classmethod
+    def addFields(new_schema: dict):
         pass
 
     @classmethod
