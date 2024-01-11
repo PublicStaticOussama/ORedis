@@ -427,17 +427,16 @@ def ORedisSchema(cls):
     async def addFields(new_schema: dict):
         schema = ()
         for fieldname, typ in new_schema.items():
-            if fieldname not in field_names:
-                if fieldname in ["payload", "id", "$ne"]:
-                    raise Exception(f"TODO Error: cannot use {fieldname} as a field name at the moment")
-                if issubclass(typ, bool):
-                    schema = schema + (TextField(fieldname),)
-                elif issubclass(typ, int):
-                    schema = schema + (NumericField(fieldname),)
-                elif issubclass(typ, str):
-                    schema = schema + (TextField(fieldname),)
-                else:
-                    schema = schema + (TextField(fieldname),)
+            if fieldname in ["payload", "id", "$ne"]:
+                raise Exception(f"TODO Error: cannot use {fieldname} as a field name at the moment")
+            if issubclass(typ, bool):
+                schema = schema + (TextField(fieldname),)
+            elif issubclass(typ, int):
+                schema = schema + (NumericField(fieldname),)
+            elif issubclass(typ, str):
+                schema = schema + (TextField(fieldname),)
+            else:
+                schema = schema + (TextField(fieldname),)
         
         print(schema)
 
