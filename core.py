@@ -38,7 +38,6 @@ def uuid_hex():
 
 def resolve_bool(st):
     if type(st) != str and type(st) != bool:
-        print("this one ???")
         raise Exception("Error: invalid boolean equivalent")
     if type(st) == bool:
         return st
@@ -232,10 +231,6 @@ def ORedisSchema(cls):
         return final_val
     
     async def termsAgg(fieldname: str):
-        # print(field_names.keys())
-        # print("============================================")
-        # print(fieldname)
-        # print("field in fieldNames", fieldname in field_names)
         if fieldname in field_names:
             req = aggregations.AggregateRequest("*").group_by(
                 f"@{fieldname}", reducers.count()
@@ -246,15 +241,10 @@ def ORedisSchema(cls):
 
             for row in res.rows:
                 if bytes(fieldname, 'utf-8') not in row:
-                    # print(bytes(fieldname, 'utf-8'))
-                    # print("=========> NOT IN ROW")
-                    # print(row)
                     continue
                 i = row.index(bytes(fieldname, 'utf-8'))
                 # print(i)
-                # print(len(row))
                 if i + 1 < len(row):
-                    # print("good there is a next !!!!")
                     value = row[i+1]
                     cast_val = value
                     if issubclass(type(field_names[fieldname]), bool): 
@@ -304,7 +294,6 @@ def ORedisSchema(cls):
                 q_arr.append(f"{ne_prefix}@{field}:{final_val}")
 
         q_str = sep.join(q_arr) if len(q_arr) else "*"
-        print(q_str)
         oquery = OQuery(Query(q_str), cls)
 
         return oquery
@@ -332,7 +321,6 @@ def ORedisSchema(cls):
                 q_arr.append(f"{ne_prefix}@{field}:{final_val}")
 
         q_str = sep.join(q_arr) if bool(q_arr) else "*"
-        print(q_str)
         if sort_by is not None:
             res = await cls.connection.ft(cls.index_name).search(Query(q_str).sort_by(sort_by, asc=bool(asc)).paging(0, 1))
         else:
@@ -437,8 +425,7 @@ def ORedisSchema(cls):
                 schema = schema + (TextField(fieldname),)
             else:
                 schema = schema + (TextField(fieldname),)
-        
-        print(schema)
+
 
         await cls.connection.ft(cls.index_name).alter_schema_add(schema)
 
