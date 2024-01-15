@@ -132,8 +132,6 @@ def ORedisSchema(cls):
             schema = schema + (TextField(fieldname),)
     schema = schema + (NumericField("created_at"),)
     schema = schema + (NumericField("updated_at"),)
-    print(schema)
-    print(field_names)
 
     try:
         cls.sync.ft(cls.index_name).create_index(schema, definition=definition)
@@ -351,6 +349,8 @@ def ORedisSchema(cls):
                         else:
                             pass 
                         doc[field] = cast_val
+                        if doc[field] == "root":
+                            print("++++++++++++++++++++++++++++++++++++++", doc)
                     doc['created_at'] = get_current_timestamp()
                     doc['updated_at'] = get_current_timestamp()
                     pipe_tmp = pipe_tmp.hset(f"{cls.prefix}{doc['_id']}", mapping=doc)
@@ -412,7 +412,6 @@ def ORedisSchema(cls):
     async def deleteAll():
         await cls.connection.ft(cls.index_name).dropindex(delete_documents=True)
         cls.sync.ft(cls.index_name).create_index(schema, definition=definition)
-        print(schema)
         print(field_names)
         waitForIndex(cls.sync, cls.index_name)
 
