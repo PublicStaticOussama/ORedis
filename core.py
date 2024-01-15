@@ -294,6 +294,7 @@ def ORedisSchema(cls):
                 q_arr.append(f"{ne_prefix}@{field}:{final_val}")
 
         q_str = sep.join(q_arr) if len(q_arr) else "*"
+        print(q_str)
         oquery = OQuery(Query(q_str), cls)
 
         return oquery
