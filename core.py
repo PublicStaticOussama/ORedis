@@ -295,7 +295,7 @@ def ORedisSchema(cls):
 
         q_str = sep.join(q_arr) if len(q_arr) else "*"
         print(q_str)
-        oquery = OQuery(Query(q_str), cls)
+        oquery = OQuery(Query(q_str).verbatim(), cls)
 
         return oquery
         # res = cls.connection.ft(cls.index_name).search(Query(q_str).paging(start, end).sort_by(field="num_id", asc=False))
@@ -323,9 +323,9 @@ def ORedisSchema(cls):
 
         q_str = sep.join(q_arr) if bool(q_arr) else "*"
         if sort_by is not None:
-            res = await cls.connection.ft(cls.index_name).search(Query(q_str).sort_by(sort_by, asc=bool(asc)).paging(0, 1))
+            res = await cls.connection.ft(cls.index_name).search(Query(q_str).verbatim().sort_by(sort_by, asc=bool(asc)).paging(0, 1))
         else:
-            res = await cls.connection.ft(cls.index_name).search(Query(q_str).paging(0, 1))
+            res = await cls.connection.ft(cls.index_name).search(Query(q_str).verbatim().paging(0, 1))
 
         one = None
         for doc in res.docs:
@@ -387,7 +387,7 @@ def ORedisSchema(cls):
                     q_arr.append(f"{ne_prefix}@{field}:{final_val}")
 
             q_str = sep.join(q_arr) if len(q_arr) else "*"
-            res = await cls.connection.ft(cls.index_name).search(Query(q_str).sort_by("created_at", asc=False).paging(0, 10_000))
+            res = await cls.connection.ft(cls.index_name).search(Query(q_str).verbatim().sort_by("created_at", asc=False).paging(0, 10_000))
             arr = []
             for doc in res.docs:
                 doc = doc.__dict__
