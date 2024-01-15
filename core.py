@@ -349,6 +349,7 @@ def ORedisSchema(cls):
                         else:
                             pass 
                         doc[field] = cast_val
+                        print(doc[field])
                     doc['created_at'] = get_current_timestamp()
                     doc['updated_at'] = get_current_timestamp()
                     pipe_tmp = pipe_tmp.hset(f"{cls.prefix}{doc['_id']}", mapping=doc)
