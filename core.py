@@ -349,7 +349,8 @@ def ORedisSchema(cls):
                         else:
                             pass 
                         doc[field] = cast_val
-                        print(doc[field])
+                        if doc[field] == "root":
+                            print("++++++++++++++++++++++++++++++++++++++", doc)
                     doc['created_at'] = get_current_timestamp()
                     doc['updated_at'] = get_current_timestamp()
                     pipe_tmp = pipe_tmp.hset(f"{cls.prefix}{doc['_id']}", mapping=doc)
@@ -363,6 +364,8 @@ def ORedisSchema(cls):
 
     cls.insert = insert
 
+    async def deleteWhere(query):
+        pass
     async def updateWhere(values, query):
         # pipe: Connection = cls.connection.pipeline()
         async with cls.connection.pipeline() as pipe:
