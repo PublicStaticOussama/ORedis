@@ -85,6 +85,7 @@ class ORedis:
         self.connection = ORedis.connection
         ORedis.sync = red.Redis(host=host, port=port, db=db)
         self.sync = red.Redis(host=host, port=port, db=db)
+        
         # self.connection.ft().aggregate()
         # if flush:
         #     await self.connection.flushdb()
@@ -294,7 +295,6 @@ def ORedisSchema(cls):
                 q_arr.append(f"{ne_prefix}@{field}:{final_val}")
 
         q_str = sep.join(q_arr) if len(q_arr) else "*"
-        print(q_str)
         oquery = OQuery(Query(q_str).verbatim(), cls)
 
         return oquery
@@ -350,8 +350,7 @@ def ORedisSchema(cls):
                         else:
                             pass 
                         doc[field] = cast_val
-                        if doc[field] == "root":
-                            print("++++++++++++++++++++++++++++++++++++++", doc)
+                
                     doc['created_at'] = get_current_timestamp()
                     doc['updated_at'] = get_current_timestamp()
                     pipe_tmp = pipe_tmp.hset(f"{cls.prefix}{doc['_id']}", mapping=doc)
@@ -366,7 +365,34 @@ def ORedisSchema(cls):
     cls.insert = insert
 
     async def deleteWhere(query):
-        pass
+        q_arr = []
+        sep = " "
+        for field, value in query.items():
+            if field in field_names:
+                ne_prefix = ""
+                if type(value) == dict:
+                    if "$ne" in value:
+                        ne_prefix = "-"
+                        value = value["$ne"]
+                    else: 
+                        raise Exception(f"Error: Invalid value given to field: {field}, {str(value)}")
+
+                final_val = _resolve_value_by_fieldname(field, value)
+                q_arr.append(f"{ne_prefix}@{field}:{final_val}")
+
+        q_str = sep.join(q_arr) if len(q_arr) else "*"
+        res = await cls.connection.ft(cls.index_name).search(Query(q_str).verbatim().sort_by("created_at", asc=False).paging(0, 10_000))
+        async with cls.connection.pipeline() as pipe:
+            for doc in res.docs:
+                doc = doc.__dict__
+                await pipe.ft(cls.index_name).delete_document(doc["id"])
+            
+            oks = await pipe.execute()
+        
+        return oks or False
+
+    cls.deleteWhere = deleteWhere
+
     async def updateWhere(values, query):
         # pipe: Connection = cls.connection.pipeline()
         async with cls.connection.pipeline() as pipe:
@@ -463,7 +489,10 @@ class OQueryInterface:
     def limit(self, start=0, size=10_000):
         pass
 
-    def exec(self, asDicts=False):
+    async def exec(self, asDicts=False):
+        pass
+
+    async def count(self):
         pass
 
 class Schema(ORedis):
@@ -500,6 +529,10 @@ class Schema(ORedis):
         pass
 
     @classmethod
+    def deleteWhere(cls, query):
+        pass
+
+    @classmethod
     def deleteAll(cls):
         pass
 
@@ -532,3 +565,7 @@ class OQuery(OQueryInterface):
                 arr.append(doc.__dict__)
 
         return arr
+    
+    async def count(self):
+        res = await self.schema.connection.ft(self.schema.index_name).search(self.search_query.no_content())
+        return res["total"]
