@@ -568,4 +568,4 @@ class OQuery(OQueryInterface):
     
     async def count(self):
         res = await self.schema.connection.ft(self.schema.index_name).search(self.search_query.no_content())
-        return res["total"]
+        return res.total
