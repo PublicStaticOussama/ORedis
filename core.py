@@ -172,7 +172,7 @@ def ORedisSchema(cls):
     cls.__str__ = toString
     cls.__repr__ = toString
 
-    def create(doc_dict):
+    def create(doc_dict, exists=False):
         inst = cls()
         for fieldname, default_val in field_names.items():
             if fieldname in doc_dict:
@@ -188,9 +188,10 @@ def ORedisSchema(cls):
                     cast_val = str(val)
                 setattr(inst, fieldname, cast_val)
 
-        setattr(inst, "_id", str(uuid_hex()))
-        setattr(inst, "created_at", get_current_timestamp())
-        setattr(inst, "updated_at", get_current_timestamp())
+        if not exists:
+            setattr(inst, "_id", str(uuid_hex()))
+            setattr(inst, "created_at", get_current_timestamp())
+            setattr(inst, "updated_at", get_current_timestamp())
         
         return inst
     
@@ -329,7 +330,7 @@ def ORedisSchema(cls):
 
         one = None
         for doc in res.docs:
-            one = cls.create(doc.__dict__)
+            one = cls.create(doc.__dict__, exists=True)
         
         return one
     
@@ -428,7 +429,7 @@ def ORedisSchema(cls):
 
                 doc['updated_at'] = get_current_timestamp()
                 pipe_tmp = pipe_tmp.hset(f"{cls.prefix}{doc['_id']}", mapping=doc)
-                arr.append(cls.create(doc))
+                arr.append(cls.create(doc), exists=True)
 
             oks = await pipe_tmp.execute()
 
@@ -509,7 +510,7 @@ class Schema(ORedis):
         pass
 
     @classmethod
-    def create(cls, doc_dict):
+    def create(cls, doc_dict, exists=False):
         pass
 
     @classmethod
@@ -559,7 +560,7 @@ class OQuery(OQueryInterface):
         arr = []
         if not asDicts:
             for doc in res.docs:
-                arr.append(self.schema.create(doc.__dict__))
+                arr.append(self.schema.create(doc.__dict__, exists=True))
         else:
             for doc in res.docs:
                 arr.append(doc.__dict__)
