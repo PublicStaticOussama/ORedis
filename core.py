@@ -330,7 +330,7 @@ def ORedisSchema(cls):
 
         one = None
         for doc in res.docs:
-            one = cls.create(doc.__dict__, exists=True)
+            one = cls.create(doc.__dict__, exists=False)
         
         return one
     
@@ -429,7 +429,7 @@ def ORedisSchema(cls):
 
                 doc['updated_at'] = get_current_timestamp()
                 pipe_tmp = pipe_tmp.hset(f"{cls.prefix}{doc['_id']}", mapping=doc)
-                arr.append(cls.create(doc), exists=True)
+                arr.append(cls.create(doc), exists=False)
 
             oks = await pipe_tmp.execute()
 
@@ -560,7 +560,7 @@ class OQuery(OQueryInterface):
         arr = []
         if not asDicts:
             for doc in res.docs:
-                arr.append(self.schema.create(doc.__dict__, exists=True))
+                arr.append(self.schema.create(doc.__dict__, exists=False))
         else:
             for doc in res.docs:
                 arr.append(doc.__dict__)
