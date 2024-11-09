@@ -188,6 +188,12 @@ def ORedisSchema(cls):
                     cast_val = str(val)
                 setattr(inst, fieldname, cast_val)
 
+        setattr(inst, "_id", doc_dict["_id"])
+        if "created_at" in doc_dict:
+            setattr(inst, "created_at", doc_dict["created_at"])
+        if "updated_at" in doc_dict:
+            setattr(inst, "updated_at", doc_dict["updated_at"])
+        
         if not exists:
             setattr(inst, "_id", str(uuid_hex()))
             setattr(inst, "created_at", get_current_timestamp())
